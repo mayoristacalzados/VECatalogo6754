@@ -23,7 +23,7 @@ header{padding:12px;background:#fff;border-bottom:1px solid var(--line)}
 .pills{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
 .pill{flex:0 0 auto;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font-weight:600;font-size:13px;cursor:pointer;color:var(--ink)}
 .pill.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.tools{display:flex;gap:8px;margin-top:8px}
+.tools{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}.tools>input,.tools>select{flex:1 1 auto;min-width:0}
 .tools input,.tools select{border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;font-family:inherit;background:#fff;color:var(--ink)}
 .tools input{flex:1;min-width:0}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:12px;padding:14px 0}
@@ -53,7 +53,7 @@ header{padding:12px;background:#fff;border-bottom:1px solid var(--line)}
 .stepper.sm{gap:6px}
 .stepper.sm button{width:30px;height:30px;font-size:18px;border-radius:8px}
 .stepper.sm .q{flex:none;min-width:28px;font-size:14px}
-.selbtn{padding:9px 12px;border:1px solid var(--accent);background:#fff;color:var(--accent);border-radius:10px;font-weight:700;font-size:13px;white-space:nowrap}
+.selbtn{padding:11px 12px;border:1.5px solid var(--accent);background:#fff;color:var(--accent);border-radius:10px;font-weight:700;font-size:13px;white-space:nowrap;flex:1 1 100%;text-align:center}
 body.selmode .card{cursor:pointer}
 .selcheck{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.92);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:800;font-size:16px;z-index:3}
 .card.picked{outline:3px solid var(--accent);outline-offset:-3px}
