@@ -53,6 +53,25 @@ header{padding:12px;background:#fff;border-bottom:1px solid var(--line)}
 .stepper.sm{gap:6px}
 .stepper.sm button{width:30px;height:30px;font-size:18px;border-radius:8px}
 .stepper.sm .q{flex:none;min-width:28px;font-size:14px}
+.selbtn{padding:9px 12px;border:1px solid var(--accent);background:#fff;color:var(--accent);border-radius:10px;font-weight:700;font-size:13px;white-space:nowrap}
+body.selmode .card{cursor:pointer}
+.selcheck{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.92);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:800;font-size:16px;z-index:3}
+.card.picked{outline:3px solid var(--accent);outline-offset:-3px}
+.card.picked .selcheck{background:var(--accent);color:#fff}
+.selbar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:40;background:#fff;border-top:1px solid var(--line);padding:10px 12px;flex-direction:column;gap:8px;box-shadow:0 -6px 20px rgba(0,0,0,.10)}
+body.selmode .selbar{display:flex}
+body.selmode #cartbar{display:none}
+.selbar input{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:14px;box-sizing:border-box}
+.selrow{display:flex;gap:8px;align-items:center}
+.selrow #selCount{flex:0 0 auto;font-weight:800;color:var(--ink);background:#eef1f4;border-radius:10px;padding:9px 12px;font-size:13px}
+.selrow button{flex:1;padding:10px;border-radius:10px;border:0;background:var(--accent);color:#fff;font-weight:700;font-size:13px}
+.selrow button.ghost{flex:0 0 auto;background:#eef1f4;color:var(--muted);padding:10px 12px}
+.selhead{display:none}
+.selview .selhead{display:block;padding:16px 14px 6px;text-align:center}
+.selview .selhead h2{margin:0 0 2px;font-family:'Baloo 2',system-ui,sans-serif;font-size:23px;color:var(--ink);font-weight:800}
+.selview .selhead small{color:var(--muted);font-size:12.5px}
+.selview .bar,.selview .hero,.selview .selbtn{display:none!important}
+.selview .grid{grid-template-columns:1fr;max-width:520px;margin:0 auto}
 .btn{width:100%;border:none;background:var(--accent);color:#fff;font-family:var(--display);font-weight:700;font-size:14px;padding:10px;border-radius:11px;cursor:pointer}
 .btn.alt{background:#fff;color:var(--accent);border:1.5px solid var(--accent)}
 .cartbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--ink);color:#fff;padding:12px 14px;display:none;align-items:center;justify-content:space-between;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
@@ -93,6 +112,7 @@ header{padding:12px;background:#fff;border-bottom:1px solid var(--line)}
 .empty{text-align:center;color:var(--muted);padding:34px 12px}
 </style></head><body data-brand="GIMBO KIDS">
 <header><div class="wrap htop"><div class="logo" id="logo">GK</div><div><b id="hName">Distribuidora Gimbo</b><small>Pedidos mayoristas · Venezuela</small></div></div></header>
+<div class="selhead" id="selhead"></div>
 <div class="hero" id="hero"></div>
 <div class="bar"><div class="wrap">
 <div class="pills" id="brandPills"></div>
@@ -100,10 +120,12 @@ header{padding:12px;background:#fff;border-bottom:1px solid var(--line)}
 <input id="q" placeholder="Buscar referencia, color…" oninput="state.q=this.value;render()">
 <select id="fTipo" onchange="state.tipo=this.value;render()"><option value="">Todos los tipos</option><option value="Ballerina">Ballerina</option><option value="Casual">Casual</option><option value="Escolar">Escolar</option><option value="Medias">Medias</option><option value="Sandalias">Sandalias</option><option value="Uniformes">Uniformes</option><option value="Vestir">Vestir</option></select>
 <select id="fSort" onchange="state.sort=this.value;render()"><option value="ref">Referencia</option><option value="precioAsc">Precio ↑</option><option value="precioDesc">Precio ↓</option></select>
+<button class="selbtn" onclick="toggleSelMode()">✓ Seleccionar</button>
 </div></div></div>
 <div class="wrap"><div class="grid" id="grid"></div></div>
 <div class="foot">Distribuidora Gimbo · Venezuela<br>Stock actualizado: 08/06/2026</div>
 <div class="cartbar" id="cartbar"><div class="info"><b id="cbTotal">$0.00</b><small id="cbCount">0 ítems</small></div><button onclick="openDrawer()">Ver pedido →</button></div>
+<div class="selbar" id="selbar"><input id="selTitle" placeholder="Título (ej. Nueva Colección)"><div class="selrow"><span id="selCount">0</span><button onclick="selLink()">Enviar link</button><button onclick="selPDF()">PDF 📄</button><button class="ghost" onclick="exitSel()">Salir</button></div></div>
 <div class="ov" id="ov" onclick="closeAll()"></div>
 
 <div class="sheet" id="modal"><div class="shead"><h2 id="mTitle">Producto</h2><button class="x" onclick="closeAll()">×</button></div><div class="sbody" id="mBody"></div></div>
@@ -543,6 +565,7 @@ function bultStock(pares,pb){if(pares<=0)return 'Agotado';var b=Math.floor(pares
 /* ---- estado ---- */
 let order={}; // key -> line
 let state={q:'',cat:'all',tipo:'',sort:'ref'};
+let selMode=false,selSet={},SELVIEW=null;
 const CATLABEL={'all':'Todas','GIMBO KIDS':'Gimbo Kids','ZABAT':'Zabat','JEPA FASHION':'Jepa Fashion','OFF':'Ofertas −50%','ESC':'Escolar','MED':'Medias','UNI':'Uniformes'};
 const CATS=['all','GIMBO KIDS','ZABAT','JEPA FASHION','OFF','ESC','MED','UNI'];
 function catMatch(c){
@@ -588,10 +611,12 @@ function priceOf(c){
   return 0;
 }
 function render(){
-  var list=CARDS.filter(matchFilter);
+  var list;
+  if(SELVIEW){list=SELVIEW.ids.map(function(id){return byId[id];}).filter(Boolean);}
+  else{list=CARDS.filter(matchFilter);
   if(state.sort==='precioAsc')list.sort((a,b)=>priceOf(a)-priceOf(b));
   else if(state.sort==='precioDesc')list.sort((a,b)=>priceOf(b)-priceOf(a));
-  else list.sort((a,b)=>(a.referencia||'').localeCompare(b.referencia||''));
+  else list.sort((a,b)=>(a.referencia||'').localeCompare(b.referencia||''));}
   var g=document.getElementById('grid');
   if(!list.length){var msg=state.cat==='UNI'?'Uniformes: próximamente. Aún no hay productos cargados en esta categoría.':'No hay productos para este filtro.';g.innerHTML='<div class="empty">'+msg+'</div>';return;}
   g.innerHTML=list.map(cardHTML).join('');
@@ -607,6 +632,9 @@ function priceSimple(c){
 function cardHTML(c){
   var t=THEME[c.marca]||THEME['GIMBO KIDS'];var chip=c.marca==='ZABAT'?'Zabat':'Gimbo Kids';
   var nb=(c.imgs&&c.imgs.length>1)?'<span class="badge">📷 '+c.imgs.length+'</span>':'';
+  if(selMode){
+    return '<div class="card selpick'+(selSet[c.id]?' picked':'')+'" id="card_'+c.id+'" onclick="selToggle(\''+c.id+'\')"><div class="imgwrap"><span class="chip">'+chip+'</span>'+nb+'<div class="selcheck">'+(selSet[c.id]?'✓':'')+'</div>'+imgTag(c)+'</div><div class="cbody"><div class="ref">'+c.referencia+'</div><div class="meta">'+metaOf(c)+'</div></div></div>';
+  }
   var body='';
   if(c.kind==='simple'){
     var rem=remPares(c.id,c.stock);var ok=rem>0;var q=order[c.id]?order[c.id].qty:0;
@@ -836,11 +864,109 @@ function startAuto(){stopAuto();heroTimer=setInterval(()=>heroShow((heroIdx+1)%H
 function stopAuto(){if(heroTimer)clearInterval(heroTimer);heroTimer=null;}
 
 /* init */
+
+function metaOf(c){
+  if(c.kind==='simple')return (c.color||'')+' · '+(c.tipo||'');
+  if(c.kind==='escolar')return 'Escolar · '+(c.colorName||'');
+  if(c.kind==='media')return 'Medias · '+((c.alturas&&c.alturas.length)||0)+' alturas';
+  return 'Uniformes · '+(c.color||'');
+}
+function priceLine(c){
+  if(c.kind==='simple')return fmt(c.precio)+' /par'+(c.oferta?'  (-50%)':'');
+  if(c.kind==='media')return 'desde '+fmt(priceOf(c))+' /docena';
+  if(c.kind==='uniforme')return 'desde '+fmt(priceOf(c))+' /unidad';
+  return 'desde '+fmt(priceOf(c))+' /par';
+}
+function selCurrentLink(title,ids){var base=location.origin+location.pathname;return base+'#sel='+ids.map(encodeURIComponent).join(',')+'&t='+encodeURIComponent(title);}
+function toggleSelMode(){if(selMode){exitSel();return;}selMode=true;document.body.classList.add('selmode');render();updateSelCount();}
+function exitSel(){selMode=false;document.body.classList.remove('selmode');render();}
+function selToggle(id){if(selSet[id])delete selSet[id];else selSet[id]=1;
+  var el=document.getElementById('card_'+id);
+  if(el){var on=!!selSet[id];el.classList.toggle('picked',on);var ck=el.querySelector('.selcheck');if(ck)ck.textContent=on?'\u2713':'';}
+  updateSelCount();}
+function updateSelCount(){var n=Object.keys(selSet).length;var e=document.getElementById('selCount');if(e)e.textContent=n+(n===1?' modelo':' modelos');}
+function selLink(){var ids=Object.keys(selSet);if(!ids.length){alert('Selecciona al menos un modelo.');return;}
+  if(location.protocol==='file:'){alert('Para enviar el link abre el cat\u00e1logo PUBLICADO (el del bot). En archivo local no se puede generar el enlace, pero s\u00ed el PDF.');return;}
+  var title=(document.getElementById('selTitle').value||'').trim()||'Nueva Colecci\u00f3n';
+  var url=selCurrentLink(title,ids);var msg=title+' \ud83d\udc47\n'+url;
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');}
+async function selPDF(){var ids=Object.keys(selSet);if(!ids.length){alert('Selecciona al menos un modelo.');return;}
+  if(!window.jspdf||!window.jspdf.jsPDF){alert('No se pudo iniciar el generador de PDF.');return;}
+  var title=(document.getElementById('selTitle').value||'').trim()||'Nueva Colecci\u00f3n';
+  var doc=buildSeleccionPDF(ids,title);var blob=doc.output('blob');
+  var fn=title.replace(/[^A-Za-z0-9]+/g,'_')+'.pdf';var file=new File([blob],fn,{type:'application/pdf'});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:title});return;}catch(e){}}
+  var u=URL.createObjectURL(blob);var a=document.createElement('a');a.href=u;a.download=fn;a.click();setTimeout(function(){URL.revokeObjectURL(u);},4000);}
+function selBrandOf(cards){var cnt={};cards.forEach(function(c){cnt[c.marca]=(cnt[c.marca]||0)+1;});var best='GIMBO KIDS',bn=-1;Object.keys(cnt).forEach(function(k){if(cnt[k]>bn){bn=cnt[k];best=k;}});return best;}
+function heroBannerFor(brand){try{var a=HEROES.filter(function(x){return x.brand===brand;});if(a.length)return a[0].d||a[0].m;}catch(e){}return null;}
+function buildSeleccionPDF(ids,title){
+  const {jsPDF}=window.jspdf;var doc=new jsPDF({unit:'pt',format:'a4'});
+  var PW=doc.internal.pageSize.getWidth(),PH=doc.internal.pageSize.getHeight();
+  var M=30,AC=[0,173,216],INK=[28,34,48],MUT=[107,114,128],LINE=[231,233,238];
+  var contentW=PW-2*M,gap=14,colW=(contentW-gap)/2;
+  var cards=ids.map(function(id){return byId[id];}).filter(Boolean);
+  var brand=selBrandOf(cards);var banner=heroBannerFor(brand);
+  var appLink=(location.protocol!=='file:')?selCurrentLink(title,ids):'';
+  var gridTop=0;
+  function drawHeader(){var y=M;
+    if(banner){var fmt=banner.indexOf('image/png')>=0?'PNG':'JPEG';var r=3;
+      try{var pr=doc.getImageProperties(banner);r=pr.width/pr.height;}catch(e){}
+      var bw=contentW,bh=bw/r,maxBH=150;if(bh>maxBH){bh=maxBH;bw=bh*r;}var bx=(PW-bw)/2;
+      try{doc.addImage(banner,fmt,bx,y,bw,bh);}catch(e){bh=0;}y+=bh+8;
+    }else{doc.setFillColor(AC[0],AC[1],AC[2]);doc.rect(0,0,PW,52,'F');
+      doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(15);doc.text('Distribuidora Gimbo',M,24);
+      doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.text('Pedidos mayoristas',M,39);y=60;}
+    doc.setTextColor(INK[0],INK[1],INK[2]);doc.setFont('helvetica','bold');doc.setFontSize(17);doc.text(String(title),PW/2,y+14,{align:'center'});
+    gridTop=y+28;}
+  function drawCard(c,x,y,w,h){
+    doc.setDrawColor(LINE[0],LINE[1],LINE[2]);doc.setFillColor(255,255,255);doc.roundedRect(x,y,w,h,10,10,'FD');
+    var pad=8,btnH=22,textBlock=54;var imgSize=Math.min(w-2*pad,h-pad-textBlock-btnH-6);
+    var ix=x+(w-imgSize)/2,iy=y+pad;var url=(c.imgs&&c.imgs.length)?IMAGES[c.imgs[0]]:null;
+    if(url){try{doc.addImage(url,'JPEG',ix,iy,imgSize,imgSize);}catch(e){doc.setFillColor(241,244,246);doc.rect(ix,iy,imgSize,imgSize,'F');}}
+    else{doc.setFillColor(241,244,246);doc.rect(ix,iy,imgSize,imgSize,'F');}
+    var chip=(c.marca==='ZABAT')?'Zabat':(c.marca==='JEPA FASHION'?'Jepa':'Gimbo Kids');
+    doc.setFont('helvetica','bold');doc.setFontSize(7);var cw=doc.getTextWidth(chip)+12;
+    doc.setFillColor(AC[0],AC[1],AC[2]);doc.roundedRect(ix+5,iy+5,cw,13,6,6,'F');
+    doc.setTextColor(255,255,255);doc.text(chip,ix+5+cw/2,iy+14,{align:'center'});
+    var tx=x+pad,ty=iy+imgSize+13;
+    doc.setTextColor(INK[0],INK[1],INK[2]);doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.text(String(c.referencia||''),tx,ty,{maxWidth:w-2*pad});
+    doc.setFont('helvetica','normal');doc.setTextColor(MUT[0],MUT[1],MUT[2]);doc.setFontSize(8);doc.text(metaOf(c),tx,ty+11,{maxWidth:w-2*pad});
+    doc.setTextColor(AC[0],AC[1],AC[2]);doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text(priceLine(c),tx,ty+22,{maxWidth:w-2*pad});
+    var bxx=x+pad,byy=y+h-btnH-8,bww=w-2*pad;
+    doc.setFillColor(AC[0],AC[1],AC[2]);doc.roundedRect(bxx,byy,bww,btnH,7,7,'F');
+    doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text('Agregar  +',x+w/2,byy+15,{align:'center'});
+    if(appLink)doc.link(bxx,byy,bww,btnH,{url:appLink});}
+  drawHeader();var footerH=24,availH=PH-gridTop-footerH,rowH=(availH-gap)/2;
+  for(var i=0;i<cards.length;i++){var pos=i%4;
+    if(pos===0&&i>0){doc.addPage();drawHeader();availH=PH-gridTop-footerH;rowH=(availH-gap)/2;}
+    var col=pos%2,row=Math.floor(pos/2);var x=M+col*(colW+gap),y=gridTop+row*(rowH+gap);
+    drawCard(cards[i],x,y,colW,rowH);}
+  var np=doc.internal.getNumberOfPages();
+  for(var p=1;p<=np;p++){doc.setPage(p);doc.setDrawColor(LINE[0],LINE[1],LINE[2]);doc.line(M,PH-20,PW-M,PH-20);
+    doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(MUT[0],MUT[1],MUT[2]);
+    doc.text('Toca "Agregar" para pedir en el catalogo interactivo'+(appLink?'  '+appLink:''),M,PH-10,{maxWidth:contentW-40});
+    doc.text(String(p)+'/'+String(np),PW-M,PH-10,{align:'right'});}
+  return doc;
+}
+function escapeHTML(s){return String(s).replace(/[&<>"]/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];});}
+function parseSel(){var h=location.hash||'';if(h.indexOf('sel=')<0)return null;
+  var raw=h.replace(/^#/,'');var parts=raw.split('&');var ids=[],title='';
+  parts.forEach(function(p){var i=p.indexOf('=');if(i<0)return;var k=p.slice(0,i),v=p.slice(i+1);
+    if(k==='sel')ids=v.split(',').filter(Boolean).map(function(x){try{return decodeURIComponent(x);}catch(e){return x;}});
+    if(k==='t'){try{title=decodeURIComponent(v);}catch(e){title=v;}}});
+  ids=ids.filter(function(id){return byId[id];});if(!ids.length)return null;
+  return {ids:ids,title:title||'Nueva Colecci\u00f3n'};}
+function applySelView(){SELVIEW=parseSel();if(!SELVIEW)return false;
+  document.body.classList.add('selview');
+  var sh=document.getElementById('selhead');
+  if(sh)sh.innerHTML='<h2>'+escapeHTML(SELVIEW.title)+'</h2><small>'+SELVIEW.ids.length+' modelos seleccionados para ti</small>';
+  try{document.title=SELVIEW.title;}catch(e){}return true;}
+
 (function(){
 try{applyTheme('all');}catch(e){}
+var isSel=false;try{isSel=applySelView();}catch(e){}
 try{render();}catch(e){}
-try{renderBrandPills();}catch(e){}
-try{renderHero();startAuto();}catch(e){}
+try{if(!isSel){renderBrandPills();renderHero();startAuto();}}catch(e){}
 try{var fc=document.getElementById('fCode');if(fc){fc.value=vendorCode;fc.oninput=function(e){var v=e.target.value.trim().toUpperCase();vendorCode=v;lsSet('ve_vendor',v);updatePedLabel();};}updatePedLabel();}catch(e){}
 })();
 </script></body></html>
